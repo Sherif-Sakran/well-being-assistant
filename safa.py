@@ -161,12 +161,12 @@ def main():
                     })
             else:
                 # spinner_text = "Safa is thinking..." if not 
-                placeholder.empty()
                 with st.spinner("Safa is thinking..."):
                     response = conversational_core_chain.invoke({
                         "user_message": user_input,
                         "chat_history": "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
                     })
+            placeholder.empty()
             rag_placeholder.empty()
             st.write(response)
             
