@@ -1,0 +1,1 @@
+In some responses, the LLM adds: `(emotion: calmness) (intent: general_chat_intent)` at the beginning of the response. It seems during training, the response of the Assistant should not have included this as part of the training.  
