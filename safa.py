@@ -46,8 +46,8 @@ def router_and_orchestrator(state):
         Analyze the user's message and classify their intent into one of the following categories:
         - `venting_intent`: The user is expressing feelings or thoughts without seeking a direct solution.
         - `continue_venting_intent`: The user is continuing a previous line of venting or expressing feelings.
-        - `seeking_solution_intent`: The user is clearly asking for advice, help, or a solution to their problem.
-        - `information_seeking_intent`: The user is asking for general information or a specific psychoeducational concept.
+        - `seeking_answer_intent`: The user is clearly asking for advice, help, or a solution to their problem.
+        - `psychoeducational_knowledge_seeking_intent`: The user is asking for a specific psychoeducational concept.
         - `meditation_request_intent`: The user is asking for a guided meditation or a meditation script.
         - `other`: The intent does not fit any of the above.
 
@@ -59,10 +59,10 @@ def router_and_orchestrator(state):
     intent = intent_classifier_chain.invoke({"user_message": user_message}).strip().lower().replace("`", "")
     print('Detected intent:', intent)
     
-    if intent in ["information_seeking_intent", "meditation_request_intent"]:
+    if intent in ["psychoeducational_knowledge_seeking_intent", "meditation_request_intent"]:
         print('returning rag_system for intent:', intent)
         return "rag_system"
-    elif intent in ["seeking_solution_intent"]:
+    elif intent in ["seeking_answer_intent"]:
         print('returning conversational_core for intent:', intent)
         return "conversational_core"
     else:
@@ -73,8 +73,8 @@ def router_and_orchestrator(state):
 def main():
     """Main Streamlit application function."""
     
-    st.set_page_config(page_title="Safa: Your Proactive Well-Being Assistant", page_icon="🧘‍♀️")
-    st.title("Safa: Your Proactive Well-Being Assistant 🧘‍♀️")
+    st.set_page_config(page_title="Safa: Your Well-Being Assistant", page_icon="🧘‍♀️")
+    st.title("Safa: Your Well-Being Assistant 🧘‍♀️")
     # st.write("Hello, I'm Safa. I'm here to listen and help you find clarity and inner peace. How are you feeling today?")
 
     # Initialize chat history in session state at the very beginning
@@ -94,13 +94,13 @@ def main():
         """
         You are Safa, a compassionate and empathetic well-being assistant. Your name means "purity" or "serenity" in Arabic, reflecting your purpose to help users find inner peace.
         Your core role is to be a proactive listener. Do not simply respond; instead, actively encourage the user to explore their feelings by asking open-ended questions. Your responses should be thoughtful and non-judgmental.
-        Your creator, Sherif Sakran, designed you to promote well-being through proactive engagement.
+        You can help the user by providing explanations of psychoeducational concepts and meditation exercises. You were created by Sherif Sakran, an MSc student at the University of Glasgow, who designed you to promote well-being through proactive engagement.
 
         Current conversation history:
         {chat_history}
 
         User: {user_message}
-        Safa:
+        Safa (emotion: calmness, intent: general_chat_intent):
         """
     )
 
@@ -126,47 +126,6 @@ def main():
         """
     )
     
-    # # Chain for the RAG System
-    # rag_chain = (
-    #     RunnablePassthrough.assign(context=itemgetter("user_message") | get_retriever())
-    #     | rag_prompt
-    #     | get_llm()
-    #     | StrOutputParser()
-    # )
-
-    # # Main Orchestrator Chain
-    # full_chain = (
-    #     RunnablePassthrough.assign(
-    #         route=RunnableLambda(router_and_orchestrator)
-    #     ).bind(llm=get_llm(), retriever=get_retriever())
-    #     | RunnableLambda(
-    #         lambda x: rag_chain.invoke(x) if x["route"] == "rag_system" else conversational_core_chain.invoke(x)
-    #     )
-    # )
-
-    # # Display previous messages from chat history
-    # for message in st.session_state.chat_history:
-    #     with st.chat_message(message["role"]):
-    #         st.write(message["content"])
-
-    # # Handle user input
-    # user_input = st.chat_input("Start a conversation...")
-    # if user_input:
-    #     st.session_state.chat_history.append({"role": "user", "content": user_input})
-
-    #     with st.chat_message("user"):
-    #         st.write(user_input)
-
-    #     with st.chat_message("assistant"):
-    #         with st.spinner("Safa is thinking..."):
-    #             # Pass chat history as an explicit input to the chain
-    #             response = full_chain.invoke({
-    #                 "user_message": user_input,
-    #                 "chat_history": "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
-    #             })
-    #             st.write(response)
-        
-    #     st.session_state.chat_history.append({"role": "assistant", "content": response})
     rag_chain = (
             RunnablePassthrough.assign(context=itemgetter("user_message") | get_retriever())
             | rag_prompt
@@ -188,10 +147,12 @@ def main():
                     Analyze the user's message and classify their intent into one of the following categories:
                     - `venting_intent`: The user is expressing feelings or thoughts without seeking a direct solution.
                     - `continue_venting_intent`: The user is continuing a previous line of venting or expressing feelings.
-                    - `seeking_solution_intent`: The user is clearly asking for advice, help, or a solution to their problem.
-                    - `information_seeking_intent`: The user is asking for general information or a specific psychoeducational concept.
+                    - `seeking_answer_intent`: The user is clearly asking for advice, help, or a solution to their problem.
+                    - `psychoeducational_knowledge_seeking_intent`: The user is asking for a specific psychoeducational concept.
                     - `meditation_request_intent`: The user is asking for a guided meditation or a meditation script.
                     - `greeting_intent`: The user is greeting or making small talk.
+                    - `conversing_intent`: The user is making small talk.
+                    - `asking_about_yourself_intent`: The user is asking about you, your capabilities, your purpose, and who created you.
                     - `other`: The intent does not fit any of the above.
 
                     User message: '{user_input}'
@@ -204,15 +165,16 @@ def main():
 
                 st.info(f"Detected Intent: **{intent}**")
 
-            if intent in ["information_seeking_intent", "meditation_request_intent", "seeking_solution_intent"]:
+            is_rag = False
+            if intent in ["psychoeducational_knowledge_seeking_intent", "meditation_request_intent"]:
                 with st.spinner("Retrieving relevant information..."):
                     retriever = get_retriever()
                     retrieved_docs = retriever.get_relevant_documents(user_input)
                     
-                    st.success(f"Found {len(retrieved_docs)} relevant documents.")
-                    
-                    # Display the full top document for debugging
                     if retrieved_docs:
+                        # Display the full top document for debugging
+                        st.success(f"Found {len(retrieved_docs)} relevant documents.")
+                        is_rag = True
                         top_doc = retrieved_docs[0]
                         with st.expander("Show Retrieved Document Details"):
                             st.subheader("Top Retrieved Document")
@@ -220,7 +182,9 @@ def main():
                             st.code(top_doc.page_content)
                             st.write("**Full Metadata:**")
                             st.json(top_doc.metadata)
-
+                    else:
+                        st.warning("No relevant documents found. Proceeding with conversational core.")
+            if is_rag:
                 with st.spinner("Generating response based on top match..."):
                     # Pass the retrieved documents as the 'context' to the RAG chain
                     response = rag_chain.invoke({
@@ -228,6 +192,7 @@ def main():
                         "context": retrieved_docs
                     })
             else:
+                # spinner_text = "Safa is thinking..." if not 
                 with st.spinner("Safa is thinking..."):
                     response = conversational_core_chain.invoke({
                         "user_message": user_input,
