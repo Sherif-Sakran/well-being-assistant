@@ -162,18 +162,23 @@ def main():
                 intent_classifier_chain = intent_prompt | llm | StrOutputParser()
                 intent = intent_classifier_chain.invoke({"user_input": user_input}).strip().lower().replace("`", "")
                 print('Detected intent:', intent)
-
-                st.info(f"Detected Intent: **{intent}**")
+                
+                placeholder = st.empty()
+                placeholder.info("Classified intent: **" + intent + "**")
+                # st.info(f"Detected Intent: **{intent}**")
 
             is_rag = False
+            rag_placeholder = st.empty()
             if intent in ["psychoeducational_knowledge_seeking_intent", "meditation_request_intent"]:
                 with st.spinner("Retrieving relevant information..."):
                     retriever = get_retriever()
                     retrieved_docs = retriever.get_relevant_documents(user_input)
+                    placeholder.empty()
                     
+                    # Display the full top document for debugging
                     if retrieved_docs:
-                        # Display the full top document for debugging
-                        st.success(f"Found {len(retrieved_docs)} relevant documents.")
+                        rag_placeholder.success(f"Found {len(retrieved_docs)} relevant documents.")
+                        # st.success(f"Found {len(retrieved_docs)} relevant documents.")
                         is_rag = True
                         top_doc = retrieved_docs[0]
                         with st.expander("Show Retrieved Document Details"):
@@ -183,7 +188,8 @@ def main():
                             st.write("**Full Metadata:**")
                             st.json(top_doc.metadata)
                     else:
-                        st.warning("No relevant documents found. Proceeding with conversational core.")
+                        rag_placeholder.warning("No relevant documents found. Proceeding with conversational core.")
+                        # st.warning("No relevant documents found. Proceeding with conversational core.")
             if is_rag:
                 with st.spinner("Generating response based on top match..."):
                     # Pass the retrieved documents as the 'context' to the RAG chain
@@ -198,7 +204,7 @@ def main():
                         "user_message": user_input,
                         "chat_history": "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
                     })
-
+            rag_placeholder.empty()
             st.write(response)
             
         st.session_state.chat_history.append({"role": "assistant", "content": response})
