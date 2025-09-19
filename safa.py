@@ -31,44 +31,6 @@ def get_retriever():
     )
     return vector_store.as_retriever()
 
-# --- 3. The Dialogue Router and Orchestrator ---
-def router_and_orchestrator(state):
-    """
-    This is the core control function. It analyzes the user's intent
-    and routes the request to either the conversational core or the RAG system.
-    This function is now a pure function that does not access st.session_state.
-    """
-    user_message = state["user_message"]
-    llm = get_llm()
-
-    intent_prompt = ChatPromptTemplate.from_template(
-        """
-        Analyze the user's message and classify their intent into one of the following categories:
-        - `venting_intent`: The user is expressing feelings or thoughts without seeking a direct solution.
-        - `continue_venting_intent`: The user is continuing a previous line of venting or expressing feelings.
-        - `seeking_answer_intent`: The user is clearly asking for advice, help, or a solution to their problem.
-        - `psychoeducational_knowledge_seeking_intent`: The user is asking for a specific psychoeducational concept.
-        - `meditation_request_intent`: The user is asking for a guided meditation or a meditation script.
-        - `other`: The intent does not fit any of the above.
-
-        User message: '{user_message}'
-        Classification from the above categories (as one word label):
-        """
-    )
-    intent_classifier_chain = intent_prompt | llm | StrOutputParser()
-    intent = intent_classifier_chain.invoke({"user_message": user_message}).strip().lower().replace("`", "")
-    print('Detected intent:', intent)
-    
-    if intent in ["psychoeducational_knowledge_seeking_intent", "meditation_request_intent"]:
-        print('returning rag_system for intent:', intent)
-        return "rag_system"
-    elif intent in ["seeking_answer_intent"]:
-        print('returning conversational_core for intent:', intent)
-        return "conversational_core"
-    else:
-        print('returning conversational_core for intent:', intent)
-        return "conversational_core"
-
 # --- Main Streamlit Application Function ---
 def main():
     """Main Streamlit application function."""
